@@ -21,8 +21,8 @@ static char const pin_str[] = "pin";
 static char const state_str[] = "state";
 static char const result_str[] = "result";
 
-static char const gpio_counts_str[] = "counts";
-static char const gpio_count_str[] = "count";
+static char const count_str[] = "count";
+static char const counts_str[] = "counts";
 static char const gpios_str[] = "gpios";
 static char const results_str[] = "results";
 static char const instance_str[] = "instance";
@@ -414,6 +414,19 @@ done:
     return result;
 }
 
+static void add_count_table_entry(
+    struct blob_buf * const b,
+    char const * const io_type,
+    size_t const count)
+{
+    void * const table_out = blobmsg_open_table(b, NULL);
+
+    blobmsg_add_string(b, gpio_io_type_str, io_type);
+    blobmsg_add_u32(b, count_str, count);
+
+    blobmsg_close_table(b, table_out);
+}
+
 static int
 gpio_counts_handler(
     struct ubus_context * ctx,
@@ -422,27 +435,21 @@ gpio_counts_handler(
     const char * method,
     struct blob_attr * msg)
 {
-    int result;
     struct blob_buf b;
 
     local_blob_buf_init(&b, 0);
 
-    void * const a = blobmsg_open_array(&b, gpio_counts_str);
-    void * table_out;
+    void * const a = blobmsg_open_array(&b, counts_str);
 
-    table_out = blobmsg_open_table(&b, NULL); 
+    add_count_table_entry(
+        &b, 
+        gpio_io_type_binary_input, 
+        configuration_num_inputs(configuration));
 
-    blobmsg_add_string(&b, gpio_io_type_str, gpio_io_type_binary_input);
-    blobmsg_add_u32(&b, gpio_count_str, configuration_num_inputs(configuration));
-
-    blobmsg_close_table(&b, table_out); 
-
-    table_out = blobmsg_open_table(&b, NULL);
-
-    blobmsg_add_string(&b, gpio_io_type_str, gpio_io_type_binary_output);
-    blobmsg_add_u32(&b, gpio_count_str, configuration_num_outputs(configuration));
-
-    blobmsg_close_table(&b, table_out); 
+    add_count_table_entry(
+        &b,
+        gpio_io_type_binary_output,
+        configuration_num_outputs(configuration));
 
     blobmsg_close_array(&b, a);
 
@@ -473,8 +480,8 @@ gpio_add_object(
 static struct ubus_method gpio_object_methods[] = {
     UBUS_METHOD(gpio_get_method_name, gpio_get_handler, gpio_get_policy),
     UBUS_METHOD(gpio_set_method_name, gpio_set_handler, gpio_set_policy),
-    UBUS_METHOD(gpio_count_str, gpio_count_handler, gpio_count_policy),
-    UBUS_METHOD_NOARG(gpio_counts_str, gpio_counts_handler)
+    UBUS_METHOD(count_str, gpio_count_handler, gpio_count_policy),
+    UBUS_METHOD_NOARG(counts_str, gpio_counts_handler)
 };
 
 static struct ubus_object_type gpio_object_type =
