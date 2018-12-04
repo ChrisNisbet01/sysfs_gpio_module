@@ -48,7 +48,18 @@ static bool get_callback(
         goto done;
     }
 
-    read_io = GPIORead(instance, state) == 0;
+    size_t gpio_number;
+
+    if (!configuration_input_gpio_number(
+            configuration,
+            instance,
+            &gpio_number))
+    {
+        read_io = false;
+        goto done;
+    }
+
+    read_io = GPIORead(gpio_number, state) == 0;
 
 done:
     return read_io;
@@ -74,7 +85,18 @@ static bool set_callback(
         goto done;
     }
 
-    wrote_io = GPIOWrite(instance, state) == 0;
+    size_t gpio_number;
+
+    if (!configuration_output_gpio_number(
+            configuration,
+            instance,
+            &gpio_number))
+    {
+        wrote_io = false;
+        goto done;
+    }
+
+    wrote_io = GPIOWrite(gpio_number, state) == 0;
 
 done:
     return wrote_io;
@@ -171,12 +193,16 @@ int main(int argc, char * * argv)
         goto done;
     }
 
-    ubus_gpio_server_initialise(ubus_ctx,
-                                "sysfs.gpio",
-                                &ubus_gpio_server_handlers,
-                                NULL);
+    ubus_gpio_server_ctx_st * ubus_server_ctx =
+        ubus_gpio_server_initialise(
+            ubus_ctx,
+            "sysfs.gpio",
+            &ubus_gpio_server_handlers,
+            NULL);
 
     uloop_run();
+
+    ubus_gpio_server_done(ubus_ctx, ubus_server_ctx);
 
     uloop_done(); 
 
