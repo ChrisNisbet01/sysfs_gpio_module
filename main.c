@@ -1,9 +1,9 @@
 #include "daemonize.h"
 #include "sysfs_gpio_module.h"
 #include "ubus.h"
-#include "ubus_server.h"
 #include "configuration.h"
 #include "debug.h"
+#include <libubusgpio/libubusgpio.h>
 
 #include <libubox/uloop.h>
 
@@ -16,6 +16,8 @@
 #include <sys/socket.h>
 #include <time.h>
 
+configuration_st const * configuration;
+
 static void usage(char const * const program_name)
 {
     fprintf(stdout, "Usage: %s [options] <listening_socket_name>\n", program_name);
@@ -25,6 +27,74 @@ static void usage(char const * const program_name)
     fprintf(stdout, "  -s %-21s %s\n", "ubus_socket", "UBUS socket name");
     fprintf(stdout, "  -c %-21s %s\n", "config", "Configuration filename");
 }
+
+static bool get_callback(
+    void * const callback_ctx,
+    char const * const io_type,
+    size_t const instance,
+    bool * const state)
+{
+    bool read_io;
+
+    if (strcmp(io_type, "binary-input") != 0)
+    {
+        read_io = false;
+        goto done;
+    }
+
+    if (instance >= configuration_num_inputs(configuration))
+    {
+        read_io = false;
+        goto done;
+    }
+
+    read_io = GPIORead(instance, state) == 0;
+
+done:
+    return read_io;
+}
+
+static bool set_callback(
+    void * const callback_ctx,
+    char const * const io_type,
+    size_t const instance,
+    bool const state)
+{
+    bool wrote_io;
+
+    if (strcmp(io_type, "binary-output") != 0)
+    {
+        wrote_io = false;
+        goto done;
+    }
+
+    if (instance >= configuration_num_outputs(configuration))
+    {
+        wrote_io = false;
+        goto done;
+    }
+
+    wrote_io = GPIOWrite(instance, state) == 0;
+
+done:
+    return wrote_io;
+}
+
+static void count_callback(
+    void * const callback,
+    append_count_callback_fn const append_callback,
+    void * const append_ctx)
+{
+    append_callback(append_ctx, "binary-input", configuration_num_inputs(configuration));
+    append_callback(append_ctx, "binary-output", configuration_num_outputs(configuration));
+}
+
+static ubus_gpio_server_handlers_st const ubus_gpio_server_handlers =
+{
+    .count_callback = count_callback,
+    .get_callback = get_callback,
+    .set_callback = set_callback
+};
 
 int main(int argc, char * * argv)
 {
@@ -80,7 +150,7 @@ int main(int argc, char * * argv)
         goto done;
     }
 
-    configuration_st const * const configuration =
+    configuration =
         configuration_load(configuration_filename);
 
     if (configuration == NULL)
@@ -101,21 +171,16 @@ int main(int argc, char * * argv)
         goto done;
     }
 
-    bool const ubus_server_initialised = gpio_ubus_server_initialise(ubus_ctx, configuration);
-
-    if (!ubus_server_initialised)
-    {
-        DPRINTF("\r\nfailed to initialise UBUS server\n");
-        exit_code = EXIT_FAILURE;
-        goto done;
-    }
+    ubus_gpio_server_initialise(ubus_ctx,
+                                "sysfs.gpio",
+                                &ubus_gpio_server_handlers,
+                                NULL);
 
     uloop_run();
 
     uloop_done(); 
 
     gpio_ubus_done();
-    gpio_ubus_server_done();
 
     disable_gpio_pins(configuration);
 
