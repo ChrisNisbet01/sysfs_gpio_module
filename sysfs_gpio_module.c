@@ -87,7 +87,6 @@ static gpio_definition_st const gpio_definitions[] =
 
 #define GPIO_BASE_PATH "/sys/class/gpio"
 
-static size_t const first_output_pin = 8;
 
 #define BUFFER_MAX 10
 static int
@@ -213,7 +212,7 @@ GPIOWrite(int const pin, bool const high)
 	int fd;
     int result;
 
-    snprintf(path, VALUE_MAX, GPIO_BASE_PATH "/gpio%d/value", pin + first_output_pin);
+    snprintf(path, sizeof path, GPIO_BASE_PATH "/gpio%d/value", pin);
 	fd = open(path, O_WRONLY);
 	if (-1 == fd) 
     {
@@ -370,16 +369,3 @@ void disable_gpio_pins(configuration_st const * const configuration)
     disable_outputs(configuration);
 }
 
-int gpio_pin_from_index(size_t const index)
-{
-    int gpio_pin;
-
-    if (index >= NUM_GPIO_DEFINITIONS)
-    {
-        gpio_pin = -1;
-    }
-
-    gpio_definition_st const * const gpio_definition = &gpio_definitions[index]; 
-
-    return gpio_definition->gpio;
-}
