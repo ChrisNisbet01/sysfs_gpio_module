@@ -18,12 +18,6 @@ gpio_ubus_add_fd(void)
     ubus_add_uloop(ubus_ctx);
 }
 
-void local_blob_buf_init(struct blob_buf * const b, int const id)
-{
-    memset(b, 0, sizeof *b);
-    blob_buf_init(b, id);
-}
-
 static void
 gpio_ubus_reconnect_timer(struct uloop_timeout * timeout)
 {
