@@ -3,7 +3,7 @@
 #include "ubus.h"
 #include "configuration.h"
 #include "debug.h"
-#include <libubusgpio/libubusgpio.h>
+#include <libubusgpio/ubus_gpio_server.h>
 
 #include <libubox/uloop.h>
 
