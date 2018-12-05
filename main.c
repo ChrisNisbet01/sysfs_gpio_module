@@ -114,8 +114,14 @@ static void count_callback(
 static ubus_gpio_server_handlers_st const ubus_gpio_server_handlers =
 {
     .count_callback = count_callback,
-    .get_callback = get_callback,
-    .set_callback = set_callback
+    .get =
+    {
+        .get_callback = get_callback
+    },
+    .set =
+    {
+        .set_callback = set_callback
+    }
 };
 
 int main(int argc, char * * argv)
