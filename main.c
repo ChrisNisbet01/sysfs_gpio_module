@@ -15,6 +15,7 @@
 #include <stdlib.h>
 #include <sys/socket.h>
 #include <time.h>
+#include <math.h>
 
 configuration_st const * configuration;
 
@@ -69,7 +70,7 @@ static bool set_callback(
     void * const callback_ctx,
     char const * const io_type,
     size_t const instance,
-    bool const state)
+    ubus_gpio_data_type_st const * const value)
 {
     bool wrote_io;
 
@@ -96,7 +97,24 @@ static bool set_callback(
         goto done;
     }
 
-    wrote_io = GPIOWrite(gpio_number, state) == 0;
+    bool state;
+    switch (value->type)
+    {
+        case ubus_gpio_data_type_bool:
+            state = value->value.b;
+            break;
+        case ubus_gpio_data_type_int:
+            state = !!value->value.u32;
+            break;
+        case ubus_gpio_data_type_double:
+            state = fabs(value->value.dbl) > 0.01f;
+            break;
+        default:
+            wrote_io = false;
+            goto done;
+    }
+
+    wrote_io = GPIOWrite(gpio_number, state)== 0;
 
 done:
     return wrote_io;
