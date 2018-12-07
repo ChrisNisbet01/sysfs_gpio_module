@@ -33,7 +33,7 @@ static bool get_callback(
     void * const callback_ctx,
     char const * const io_type,
     size_t const instance,
-    bool * const state)
+    ubus_gpio_data_type_st * const value)
 {
     bool read_io;
 
@@ -60,7 +60,17 @@ static bool get_callback(
         goto done;
     }
 
-    read_io = GPIORead(gpio_number, state) == 0;
+    bool state;
+
+    read_io = GPIORead(gpio_number, &state) == 0;
+
+    if (!read_io)
+    {
+        goto done;
+    }
+
+    value->type = ubus_gpio_data_type_bool;
+    value->value.b = state; 
 
 done:
     return read_io;
