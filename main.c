@@ -236,7 +236,7 @@ int main(int argc, char * * argv)
 
     uloop_run();
 
-    ubus_gpio_server_done(ubus_ctx, ubus_server_ctx);
+    ubus_gpio_server_done(ubus_server_ctx);
 
     uloop_done(); 
 
